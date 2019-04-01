@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
@@ -12,22 +13,26 @@ import android.view.MenuItem;
 
 import com.andy.sharedpreference.Fragment.LoginFragment;
 import com.andy.sharedpreference.Fragment.NoteFragment;
+import com.andy.sharedpreference.Fragment.SettingFragment;
+import com.andy.sharedpreference.adapters.NoteAdapter;
 import com.andy.sharedpreference.models.User;
 
-public class MainActivity extends AppCompatActivity implements LoginFragment.OnLoginFragmentListener,NoteFragment.OnNoteFragmentListener {
+public class MainActivity extends AppCompatActivity implements LoginFragment.OnLoginFragmentListener, NoteFragment.OnNoteFragmentListener {
+
+    private static final String TAG = MainActivity.class.getSimpleName();
 
     private Settings settings;
     private Session session;
 
-
-
-
+    public Settings getSettings() {
+        return settings;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = findViewById(R.id.toolbar);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
         settings = new Settings(this);
@@ -52,40 +57,63 @@ public class MainActivity extends AppCompatActivity implements LoginFragment.OnL
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            createSettingFragment();
             return true;
         }
 
         return super.onOptionsItemSelected(item);
     }
-    private void addFragment() {
-        Fragment fragment = null;
-        if (session.isLogin()) {
-            fragment = new NoteFragment();
-        } else {
-            fragment = new LoginFragment();
-            ((LoginFragment) fragment).setListener(this);
-        }
 
-        getSupportFragmentManager().beginTransaction()
-                .replace(R.id.fragment_container, fragment)
-                .commit();
+    private void addFragment() {
+        Fragment fragment = (session.isLogin()) ? new NoteFragment() : new LoginFragment();
+        changeFragment(fragment, false);
     }
 
+    private void changeFragment(Fragment fragment, boolean addToBackStack) {
+        FragmentTransaction transaction = getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.fragment_container, fragment);
+        if (addToBackStack) {
+            transaction.addToBackStack(null);
+        }
+        transaction.commit();
+    }
+
+    private void createSettingFragment() {
+        Fragment settingFragment = new SettingFragment();
+        changeFragment(settingFragment, true);
+    }
 
     @Override
-    public void onLoginClicked(View view, String username, String password) {
+    public void onLoginButtonClicked(final View view, final String username, final String password) {
         User user = session.doLogin(username, password);
         String message = "Authentication failed";
         if (user != null) {
             message = "Welcome " + username;
             session.setUser(username);
+            addFragment();
         }
         Snackbar.make(view, message, Snackbar.LENGTH_SHORT).show();
-        addFragment();
     }
 
     @Override
-    public void onLogoutClick() {
+    public void onRegisterLinkClicked() {
+
+    }
+
+
+    @Override
+    public void onNotesLoad(NoteAdapter adapter) {
+        adapter.setNotes(Data.getNotes());
+    }
+
+    @Override
+    public void onAddButtonClicked() {
+
+    }
+
+    @Override
+    public void onLogoutMenuClicked() {
         session.doLogout();
         addFragment();
     }
